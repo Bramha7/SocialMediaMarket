@@ -19,6 +19,10 @@ import CredentialChange from "./pages/admin/CredentialChange"
 import Transaction from './pages/admin/Transactions'
 import AllListings from "./pages/admin/AllListings"
 import Withdrawal from "./pages/admin/Withdrawal"
+import { useAuth, useUser } from "@clerk/clerk-react"
+import { useDispatch } from "react-redux"
+import { useEffect } from "react"
+import { getAllPublicListing, getAllUserListing } from "./app/features/ListingSlice"
 
 
 
@@ -26,6 +30,22 @@ import Withdrawal from "./pages/admin/Withdrawal"
 
 function App() {
   const { pathname } = useLocation();
+  const { getToken } = useAuth()
+  const { user, isLoaded } = useUser()
+  const dispatch = useDispatch()
+
+  useEffect(() => {
+    dispatch(getAllPublicListing())
+
+  }, [])
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      dispatch(getAllUserListing({ getToken }))
+    }
+
+  }, [isLoaded, user])
+
 
   return (
     <>
