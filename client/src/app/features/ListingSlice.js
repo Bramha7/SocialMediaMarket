@@ -60,7 +60,7 @@ const listingSlice = createSlice({
 
 
     builder.addCase(getAllUserListing.fulfilled, (state, action) => {
-      state.listings = action.payload.listings;
+      state.userListings = action.payload.listings;
       state.balance = action.payload.balance
 
     })

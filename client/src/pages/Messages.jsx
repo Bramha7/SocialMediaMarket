@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState } from "react"
-import { dummyChats } from "../assets/assets"
 import { MessageCircle, Search } from "lucide-react"
 import { format, isToday, isYesterday, parseISO } from 'date-fns'
 import { useDispatch } from "react-redux"
 import { setChat } from "../app/features/ChatSlice"
+import toast from "react-hot-toast"
+import { useAuth, useUser } from "@clerk/clerk-react"
+import api from "../config/axios"
+import { data } from "react-router-dom"
 
 const Messages = () => {
   const dispatch = useDispatch()
 
-  const user = { id: "user_1" }
+
+
+  const { user, isLoaded } = useUser()
+  const { getToken } = useAuth()
 
 
   const [chats, setChats] = useState([])
@@ -46,17 +52,38 @@ const Messages = () => {
   }, [chats, searchQuery])
 
   const fetchUserChats = async () => {
-    setChats(dummyChats);
-    setLoading(false)
+    try {
+      const token = await getToken()
+      const { data } = await api.get("/chat/user", {
+        headers: {
+          Authorization: `Bearer ${token}`
+
+        }
+      })
+      setChats(data.chats)
+      setLoading(false)
+
+
+
+    } catch (err) {
+      toast.error(err.message)
+      console.log(err)
+      setLoading(false)
+
+    }
   }
 
   useEffect(() => {
-    fetchUserChats()
-    const interval = setInterval(() => {
+    if (user && isLoaded) {
+
       fetchUserChats()
-    }, 10 * 1000)
-    return () => clearInterval(interval)
-  })
+
+      const interval = setInterval(() => {
+        fetchUserChats()
+      }, 10 * 1000)
+      return () => clearInterval(interval)
+    }
+  }, [user, isLoaded])
 
 
   return (

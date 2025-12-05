@@ -22,12 +22,12 @@ const MyListings = () => {
   const dispatch = useDispatch()
 
 
+  const [showCredentialSubmission, setShowCredentialSubmission] = useState(null)
+  const [showWithdrawal, setShowWithdrawal] = useState(null)
 
   const totalValue = userListings.reduce((sum, listing) => sum + (listing.price || 0), 0);
   const activeListings = userListings.filter((listing) => listing.status === 'active').length;
   const soldListings = userListings.filter((listing) => listing.status === 'sold').length;
-  const [showCredentialSubmission, setShowCredentialSubmission] = useState(null)
-  const [showWithdrawal, setShowWithdrawal] = useState(null)
 
   const balanceItems = [
     { label: 'Earned', value: balance.earned, icon: WalletIcon },
@@ -41,6 +41,7 @@ const MyListings = () => {
     return num?.toString() || '0'
 
   }
+
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -128,7 +129,7 @@ const MyListings = () => {
     try {
       toast.loading('Feature Marking....')
       const token = await getToken()
-      const { data } = await api.put(`/featured/${listingId}`, {},
+      const { data } = await api.put(`/listing/featured/${listingId}`, {},
         {
           headers: {
             Authorization: `Bearer ${token}`

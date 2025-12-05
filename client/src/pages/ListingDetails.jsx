@@ -3,12 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { getProfileLink, platformIcons } from "../assets/assets";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  ArrowLeftIcon,
-  ArrowUpRightFromSquareIcon,
-  CalendarIcon,
-  CheckCircle2,
-  ChevronLeftIcon,
-  ChevronRightIcon,
+  ArrowLeftIcon, ArrowUpRightFromSquareIcon, CalendarIcon, CheckCircle2, ChevronLeftIcon, ChevronRightIcon,
   DollarSign,
   Eye,
   LineChart,
@@ -19,11 +14,14 @@ import {
   Users,
 } from "lucide-react";
 import { setChat } from "../app/features/ChatSlice";
+import { useUser } from "@clerk/clerk-react";
+import toast from "react-hot-toast";
 
 const ListingDetails = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch()
   const currency = import.meta.env.VITE_CURRENCY || "$";
+  const { user, isLoaded } = useUser()
 
   const [listing, setListing] = useState(null);
   const profileLink = listing && getProfileLink(listing.platform, listing.username);
@@ -41,6 +39,10 @@ const ListingDetails = () => {
   }
 
   const loadChat = () => {
+    if (!user && !isLoaded) return toast("Please login to chat with seller")
+    if (user.id === listing.ownerId) {
+      return toast("You can't chat with your own listing")
+    }
 
     dispatch(setChat({ listing: listing }))
 

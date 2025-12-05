@@ -96,7 +96,7 @@ export const getChat = async (req, res) => {
 export async function getAllUserChats(req, res) {
   try {
     const { userId } = await req.auth();
-    const chats = prisma.chat.findMany({
+    const chats = await prisma.chat.findMany({
       where: { OR: [{ chatUserId: userId }, { ownerUserId: userId }] },
       include: {
         listing: true,

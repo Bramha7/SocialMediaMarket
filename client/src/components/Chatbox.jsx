@@ -3,19 +3,44 @@ import { useDispatch, useSelector } from "react-redux"
 import { dummyChats } from "../assets/assets"
 import { Loader2Icon, Send, X } from "lucide-react"
 import { clearChat } from "../app/features/ChatSlice"
+import { useAuth, useUser } from "@clerk/clerk-react"
+import api from "../config/axios"
+import toast from "react-hot-toast"
+import { interval } from "date-fns"
 
 export const Chatbox = () => {
   const dispatch = useDispatch()
 
   const { listing, isOpen, chatId } = useSelector((store) => store.chat)
 
-  const user = { id: "user_44" }
+  const { getToken } = useAuth()
+  const { user } = useUser()
 
   const [chat, setChat] = useState(null)
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
+
+  const fetchChat = async () => {
+    try {
+      const token = await getToken()
+      const { data } = await api.post(`/chat`, { listingId: listing.id, chatId }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      setChat(data?.chat)
+      setMessages(data?.chat?.messages || [])
+      setIsLoading(false)
+
+
+    } catch (err) {
+      toast.error(err.message)
+      console.log(err)
+
+    }
+  }
 
   // Reset when closing
   useEffect(() => {
@@ -36,7 +61,14 @@ export const Chatbox = () => {
   }
 
   useEffect(() => {
-    if (listing) pullChat()
+    if (listing) {
+      fetchChat()
+      const interval = setInterval(() => {
+        fetchChat()
+
+      }, 3000)
+    }
+    return () => clearInterval(interval)
   }, [listing])
 
 
@@ -51,19 +83,27 @@ export const Chatbox = () => {
     e.preventDefault()
     if (!newMessage.trim() || isSending) return
 
-    setIsSending(true)
+    try {
+      setIsSending(true)
+      const token = await getToken()
+      const { data } = await api.post('/chat/send-message', {
+        chatId: chat.id, message: newMessage
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      setMessages([...messages, data.newMessage])
+      setNewMessage("")
+      setIsSending(false)
 
-    const newMsg = {
-      id: Date.now(),
-      chatId: chat.id,
-      sender_id: user.id,
-      message: newMessage,
-      createdt: new Date(),
+    } catch (err) {
+      toast.error(err.message)
+      console.log(err)
+      setIsSending(false)
+
+
     }
-
-    setMessages((prev) => [...prev, newMsg])
-    setNewMessage("")
-    setIsSending(false)
   }
 
   if (!isOpen || !listing) return null
