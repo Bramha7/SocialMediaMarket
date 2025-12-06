@@ -45,7 +45,6 @@ export const addListing = async (req, res) => {
 
     })
 
-    //wait for all to upload
 
     const images = await Promise.all(uploadImages)
     const listing = await prisma.listing.create({
@@ -160,91 +159,92 @@ export const getAllUserListing = async (req, res) => {
   }
 }
 
-// controller for updateing listing in database
 
 export const updateListing = async (req, res) => {
   try {
-    const { userId } = await req.auth()
-    const accountDetails = JSON.parse(req.body.accountDetails)
-    if (req.files.length + accountDetails.images.length > 0) {
+    const { userId } = await req.auth();
+    const accountDetails = JSON.parse(req.body.accountDetails);
+
+    if (
+      (req.files?.length || 0) + (accountDetails.images?.length || 0) > 5
+    ) {
       return res.status(400).json({
-        message: "you can upload only upto 5 images"
-      })
+        message: "You can upload only up to 5 images",
+      });
     }
 
-    accountDetails.followers_count = parseFloat(accountDetails.followers_count)
-    accountDetails.engagement_rate = parseFloat(accountDetails.engagement_rate)
-    accountDetails.monthly_views = parseFloat(accountDetails.monthly_views)
-    accountDetails.price = parseFloat(accountDetails.price)
-    accountDetails.platform = parseFloat(accountDetails.platform.toLowerCase())
-    accountDetails.niche = parseFloat(accountDetails.niche.toLowerCase())
+    accountDetails.followers_count = Number(accountDetails.followers_count);
+    accountDetails.engagement_rate = Number(accountDetails.engagement_rate);
+    accountDetails.monthly_views = Number(accountDetails.monthly_views);
+    accountDetails.price = Number(accountDetails.price);
 
-    accountDetails.username.startsWith("@") ? accountDetails.username = accountDetails.username.slice(1) : null;
+    accountDetails.platform = accountDetails.platform?.toLowerCase();
+    accountDetails.niche = accountDetails.niche?.toLowerCase();
 
-    const listing = await prisma.listing.update({
+    if (accountDetails.username?.startsWith("@")) {
+      accountDetails.username = accountDetails.username.slice(1);
+    }
+
+    const listing = await prisma.listing.findFirst({
       where: {
-        id: accountDetails.id, ownerId: userId
-      }
-    })
+        id: accountDetails.id,
+        ownerId: userId,
+      },
+    });
 
     if (!listing) {
       return res.status(404).json({
         message: "Listing not found!!",
-        success: false
-      })
-    }
-    if (listing.status === 'sold') {
-      res.status(400).json({
-        message: "you can't update sold listing"
-      })
+        success: false,
+      });
     }
 
-    if (req.files.length > 0) {
+    if (listing.status === "sold") {
+      return res.status(400).json({
+        message: "You can't update a sold listing",
+      });
+    }
 
+    let updatedImages = listing.images || [];
+
+    if (req.files?.length > 0) {
       const uploadImages = req.files.map(async (file) => {
         const response = await imagekit.files.upload({
           file: fs.createReadStream(file.path),
           folder: "MediaSell",
           fileName: `${Date.now()}.png`,
-          transformation: { pre: "w-1280, h-auto" }
-        })
-        return response.url
+          transformation: { pre: "w-1280, h-auto" },
+        });
+        return response.url;
+      });
 
-      })
-
-      const images = await Promise.all(uploadImages)
-      const listing = await prisma.listing.update({
-        where: {
-          id: accountDetails.id,
-          ownerId: userId
-        },
-        data: {
-          ownerId: userId,
-          ...accountDetails,
-          images: [...accountDetails.images, ...images]
-        }
-
-      })
-      return res.json({
-        message: "Account Updated successfully ", listing
-      })
-
-
+      const images = await Promise.all(uploadImages);
+      updatedImages = [...updatedImages, ...images];
     }
 
+    const updatedListing = await prisma.listing.update({
+      where: {
+        id: accountDetails.id,
+      },
+      data: {
+        ...accountDetails,
+        images: updatedImages,
+      },
+    });
+
     return res.json({
-      message: "Account Updated successfully ", listing
-    })
-
+      message: "Account updated successfully",
+      listing: updatedListing,
+    });
   } catch (err) {
-    console.log(err)
-    res.status(500).json({
+    console.error(err);
+    return res.status(500).json({
       success: false,
-      message: err.message
-    })
-
+      message: err.message,
+    });
   }
-}
+};
+
 
 export const toggleStatus = async (req, res) => {
   try {
